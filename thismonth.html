@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pocket - Monthly Tracker</title>
+    <style>body {
+        background-color: #0f4c75;
+        font-family: Arial, sans-serif;
+        color: white;
+        margin: 0;
+        padding: 0;
+      }
+      
+      .container {
+        padding: 20px;
+        max-width: 900px;
+        margin: auto;
+      }
+      
+      h1, h2 {
+        text-align: center;
+        color: #bbe1fa;
+      }
+      
+      input {
+        padding: 10px;
+        margin: 5px;
+        border: none;
+        border-radius: 5px;
+      }
+      
+      button {
+        padding: 10px;
+        background-color: #1b98e0;
+        border: none;
+        color: white;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      
+      button:hover {
+        background-color: #3282b8;
+      }
+      
+      section {
+        margin: 20px 0;
+        background-color: #1b262c;
+        padding: 15px;
+        border-radius: 10px;
+      }
+      
+      #monthlyExpenditureTable {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+      
+      #monthlyExpenditureTable th,
+      #monthlyExpenditureTable td {
+        padding: 12px;
+        border-bottom: 1px solid #3282b8;
+        text-align: left;
+      }
+      
+      .chart-container {
+        max-width: 500px;
+        margin: 30px auto;
+      }
+      
+      #currentBudget {
+        color: #76c7c0;
+        font-size: 1.2em;
+        margin-top: 10px;
+      }
+      </style>
+    
+</head>
+<body>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <div class="container">
+        <h1>Monthly Budget Tracker</h1>
+
+        <section class="budget-section">
+            <h2>Set Monthly Budget</h2>
+            <input type="number" id="budgetInput" placeholder="Enter your budget">
+            <button onclick="setBudget()">Set Budget</button>
+            <p id="currentBudget">Budget: ₹0</p>
+        </section>
+
+        <section class="expense-section">
+            <h2>Add Expenditure</h2>
+            <input type="number" id="amountInput" placeholder="Amount">
+            <input type="text" id="reasonInput" placeholder="Category (e.g., Food, Travel, Friends)">
+            <button onclick="addExpenditure()">Add</button>
+        </section>
+
+        <section class="month-summary">
+            <h2>This Month's Expenditure - Detailed View</h2>
+            <table id="monthlyExpenditureTable">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Amount (₹)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+            <div class="chart-container">
+                <canvas id="monthlyExpenditureChart"></canvas>
+            </div>
+        </section>
+    </div>
+
+    <script>let userData = JSON.parse(localStorage.getItem("userData")) || {
+        budget: 0,
+        expenditures: []
+      };
+      
+      function saveData() {
+        localStorage.setItem("userData", JSON.stringify(userData));
+      }
+      
+      function setBudget() {
+        const input = document.getElementById("budgetInput").value;
+        const budget = parseFloat(input);
+        if (!isNaN(budget) && budget >= 0) {
+          userData.budget = budget;
+          saveData();
+          document.getElementById("currentBudget").textContent = `Budget: ₹${budget}`;
+        }
+      }
+      
+      function addExpenditure() {
+        const amountInput = document.getElementById("amountInput").value;
+        const reasonInput = document.getElementById("reasonInput").value.trim();
+        const amount = parseFloat(amountInput);
+        const reason = reasonInput || "Others";
+      
+        if (!isNaN(amount) && amount > 0) {
+          userData.expenditures.push({ amount, reason });
+          saveData();
+          updateMonthlyExpenditureSection();
+        }
+      }
+      
+      function updateMonthlyExpenditureSection() {
+        const categories = ["Friends", "Stationary", "Travel", "Food & Meals", "Others"];
+        const categoryTotals = {
+          Friends: 0,
+          Stationary: 0,
+          Travel: 0,
+          "Food & Meals": 0,
+          Others: 0
+        };
+      
+        userData.expenditures.forEach(item => {
+          const key = categories.includes(item.reason) ? item.reason : "Others";
+          categoryTotals[key] += item.amount;
+        });
+      
+        const tbody = document.querySelector("#monthlyExpenditureTable tbody");
+        tbody.innerHTML = "";
+        categories.forEach(cat => {
+          const row = document.createElement("tr");
+          row.innerHTML = `<td>${cat}</td><td>₹${categoryTotals[cat].toFixed(2)}</td>`;
+          tbody.appendChild(row);
+        });
+      
+        const ctx = document.getElementById("monthlyExpenditureChart").getContext("2d");
+        if (window.monthlyChart) window.monthlyChart.destroy();
+      
+        window.monthlyChart = new Chart(ctx, {
+          type: "pie",
+          data: {
+            labels: categories,
+            datasets: [{
+              data: categories.map(c => categoryTotals[c]),
+              backgroundColor: ["#1b98e0", "#76c7c0", "#383e56", "#bbe1fa", "#0f4c75"],
+              borderColor: "#fff",
+              borderWidth: 2
+            }]
+          },
+          options: {
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return `${context.label}: ₹${context.raw.toFixed(2)}`;
+                  }
+                }
+              },
+              legend: {
+                position: "bottom"
+              }
+            }
+          }
+        });
+      }
+      
+      // Initialize on load
+      window.onload = function () {
+        document.getElementById("currentBudget").textContent = `Budget: ₹${userData.budget}`;
+        updateMonthlyExpenditureSection();
+      };
+      </script>
+</body>
+</html>
